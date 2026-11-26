@@ -21,6 +21,29 @@ interface MovieBoxApi {
     @GET("/api/me")
     suspend fun getMe(@Header("Authorization") bearer: String): MeResponse
 
+        @POST("/api/admin/sync")
+    suspend fun adminSync(@Header("Authorization") bearer: String): Map<String, Any>
+
+    @POST("/api/admin/media/public-all")
+    suspend fun adminPublicAll(@Header("Authorization") bearer: String): Map<String, Any>
+
+    @POST("/api/admin/media/private-all")
+    suspend fun adminPrivateAll(@Header("Authorization") bearer: String): Map<String, Any>
+
+    @POST("/api/admin/media/{fileId}/visibility")
+    suspend fun setMediaVisibility(
+        @Header("Authorization") bearer: String,
+        @Path("fileId") fileId: String,
+        @Body body: Map<String, Boolean>
+    ): Map<String, Any>
+
+    @POST("/api/admin/media/{fileId}/adult")
+    suspend fun setMediaAdult(
+        @Header("Authorization") bearer: String,
+        @Path("fileId") fileId: String,
+        @Body body: Map<String, Boolean>
+    ): Map<String, Any>
+
     @GET("/api/catalog")
     suspend fun getCatalog(@Header("Authorization") bearer: String): CatalogResponse
 

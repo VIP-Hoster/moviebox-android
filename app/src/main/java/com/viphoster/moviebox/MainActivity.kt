@@ -334,7 +334,7 @@ fun CatalogScreen(
     var query by remember { mutableStateOf("") }
     var selectedCat by remember { mutableStateOf("All") }
     val tabs = remember(isAdmin) {
-        if (isAdmin) listOf("All", "Anime", "Movies", "Series", "18+")
+        if (isAdmin) listOf("All", "Anime", "Movies", "Series", "18+", "Admin")
         else listOf("All", "Anime", "Movies", "Series")
     }
     val filtered = remember(catalog, query, selectedCat, isAdmin) {
@@ -342,7 +342,7 @@ fun CatalogScreen(
             if (!isAdmin && (item.public == false || item.isAdult == true)) return@filter false
             val matchesCat = when (selectedCat) {
                 "All" -> true
-                "18+" -> item.isAdult == true
+                "18+" -> item.isAdult == true || item.category.equals("18+", true) || item.tags.orEmpty().any { it.equals("18+", true) }
                 "Anime" -> item.category.equals("Anime", true) || (item.tags?.any { it.equals("ANIME", true) } == true)
                 "Movies" -> item.category.equals("Movies", true) || (item.episodes.isNullOrEmpty() && item.isAdult != true)
                 "Series" -> item.category.equals("Series", true) || !item.episodes.isNullOrEmpty()
@@ -387,7 +387,10 @@ fun CatalogScreen(
             }
         }
 
-        if (loading && catalog.isEmpty()) {
+        if (selectedCat == "Admin" && isAdmin) {
+            val tok = remember { SessionStore(context).getToken() ?: "" }
+            AdminPanel(token = tok, catalog = catalog, onRefresh = onRefresh)
+        } else if (loading && catalog.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         } else {
             LazyVerticalGrid(
@@ -659,6 +662,158 @@ fun ProfileScreen(
         } else {
             LazyVerticalGrid(columns = GridCells.Fixed(2), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(items, key = { it.id }) { item -> MediaPosterCard(item = item, onClick = { onSelectMedia(item) }) }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun AdminPanel(
+    token: String,
+    catalog: List<MediaItem>,
+    onRefresh: () -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    var search by remember { mutableStateOf("") }
+    val bearer = remember(token) { "Bearer $token" }
+
+    val list = remember(catalog, search) {
+        val q = search.trim()
+        if (q.isEmpty()) catalog
+        else catalog.filter { it.displayTitle().contains(q, ignoreCase = true) }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                enabled = !busy,
+                onClick = {
+                    scope.launch {
+                        busy = true
+                        try {
+                            ApiClient.api.adminSync(bearer)
+                            Toast.makeText(context, "Drive sync started", Toast.LENGTH_SHORT).show()
+                            onRefresh()
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Sync error: ${e.message}", Toast.LENGTH_SHORT).show()
+                        } finally { busy = false }
+                    }
+                },
+                modifier = Modifier.weight(1f)
+            ) { Text("Sync Drive", fontSize = 12.sp) }
+
+            OutlinedButton(
+                enabled = !busy,
+                onClick = {
+                    scope.launch {
+                        busy = true
+                        try {
+                            ApiClient.api.adminPublicAll(bearer)
+                            Toast.makeText(context, "All items set Public", Toast.LENGTH_SHORT).show()
+                            onRefresh()
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                        } finally { busy = false }
+                    }
+                }
+            ) { Text("Public All", fontSize = 12.sp) }
+
+            OutlinedButton(
+                enabled = !busy,
+                onClick = {
+                    scope.launch {
+                        busy = true
+                        try {
+                            ApiClient.api.adminPrivateAll(bearer)
+                            Toast.makeText(context, "All items set Private", Toast.LENGTH_SHORT).show()
+                            onRefresh()
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                        } finally { busy = false }
+                    }
+                }
+            ) { Text("Private All", fontSize = 12.sp) }
+        }
+
+        OutlinedTextField(
+            value = search,
+            onValueChange = { search = it },
+            singleLine = true,
+            placeholder = { Text("Filter admin items (${catalog.size})...", fontSize = 13.sp) },
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+        )
+
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 24.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(list, key = { "adm_" + it.id }) { item ->
+                val isPub = item.public != false
+                val is18 = item.isAdult == true
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF151920))
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = item.displayTitle(),
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "${item.category ?: "Media"} • ${if (isPub) "Public" else "Private"}${if (is18) " • 18+" else ""}",
+                            color = Color.White.copy(alpha = 0.65f),
+                            fontSize = 11.sp
+                        )
+                    }
+                    FilterChip(
+                        selected = isPub,
+                        onClick = {
+                            scope.launch {
+                                try {
+                                    ApiClient.api.setMediaVisibility(
+                                        bearer,
+                                        item.playableFileId(),
+                                        mapOf("public" to !isPub)
+                                    )
+                                    onRefresh()
+                                } catch (_: Exception) {}
+                            }
+                        },
+                        label = { Text(if (isPub) "Public" else "Private", fontSize = 11.sp) }
+                    )
+                    FilterChip(
+                        selected = is18,
+                        onClick = {
+                            scope.launch {
+                                try {
+                                    ApiClient.api.setMediaAdult(
+                                        bearer,
+                                        item.playableFileId(),
+                                        mapOf("is_adult" to !is18)
+                                    )
+                                    onRefresh()
+                                } catch (_: Exception) {}
+                            }
+                        },
+                        label = { Text("18+", fontSize = 11.sp) }
+                    )
+                }
             }
         }
     }
