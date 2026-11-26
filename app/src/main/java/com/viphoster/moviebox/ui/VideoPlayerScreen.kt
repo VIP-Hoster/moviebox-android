@@ -191,9 +191,6 @@ fun VideoPlayerScreen(
                         }
                     }
                 },
-                update = { view ->
-                    view.setFullscreenButtonState(isFullscreen)
-                },
                 modifier = Modifier.fillMaxSize()
             )
 
