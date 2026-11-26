@@ -94,7 +94,7 @@ fun MovieBoxApp() {
         try {
             val bearer = "Bearer $tok"
             val userInfo = ApiClient.api.getMe(bearer)
-            if (!userInfo.authenticated && userInfo.role.isBlank()) {
+            if (!userInfo.authenticated && userInfo.role.isNullOrBlank()) {
                 saveToken("")
                 me = null
                 return
