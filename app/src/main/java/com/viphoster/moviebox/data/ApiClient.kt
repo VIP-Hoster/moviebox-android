@@ -1,46 +1,4 @@
 package com.viphoster.moviebox.data
-import com.google.gson.GsonBuilder
-import com.google.gson.TypeAdapter
-import com.google.gson.stream.JsonReader
-import com.google.gson.stream.JsonToken
-import com.google.gson.stream.JsonWriter
-
-private val safeDoubleAdapter = object : TypeAdapter<Double?>() {
-    override fun write(out: JsonWriter, value: Double?) { out.value(value) }
-    override fun read(reader: JsonReader): Double? {
-        if (reader.peek() == JsonToken.NULL) { reader.nextNull(); return null }
-        val raw = reader.nextString().trim()
-        return raw.toDoubleOrNull()
-    }
-}
-
-private val safeIntAdapter = object : TypeAdapter<Int?>() {
-    override fun write(out: JsonWriter, value: Int?) { out.value(value) }
-    override fun read(reader: JsonReader): Int? {
-        if (reader.peek() == JsonToken.NULL) { reader.nextNull(); return null }
-        val raw = reader.nextString().trim()
-        return raw.toIntOrNull() ?: raw.toDoubleOrNull()?.toInt()
-    }
-}
-
-private val safeLongAdapter = object : TypeAdapter<Long?>() {
-    override fun write(out: JsonWriter, value: Long?) { out.value(value) }
-    override fun read(reader: JsonReader): Long? {
-        if (reader.peek() == JsonToken.NULL) { reader.nextNull(); return null }
-        val raw = reader.nextString().trim()
-        return raw.toLongOrNull() ?: raw.toDoubleOrNull()?.toLong()
-    }
-}
-
-private val safeGson = GsonBuilder()
-    .registerTypeAdapter(Double::class.java, safeDoubleAdapter)
-    .registerTypeAdapter(Double::class.javaObjectType, safeDoubleAdapter)
-    .registerTypeAdapter(Int::class.java, safeIntAdapter)
-    .registerTypeAdapter(Int::class.javaObjectType, safeIntAdapter)
-    .registerTypeAdapter(Long::class.java, safeLongAdapter)
-    .registerTypeAdapter(Long::class.javaObjectType, safeLongAdapter)
-    .create()
-
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -88,7 +46,7 @@ object ApiClient {
     val api: MovieBoxApi = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .client(okHttp)
-        .addConverterFactory(GsonConverterFactory.create(safeGson))
+        .addConverterFactory(GsonConverterFactory.create())
         .build()
         .create(MovieBoxApi::class.java)
 }

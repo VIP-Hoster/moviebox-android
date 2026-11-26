@@ -48,7 +48,7 @@ data class MediaItem(
 ) {
     fun displayTitle(): String = (title ?: name ?: "Untitled").trim()
     fun displayOverview(): String = (overview ?: description ?: "").trim()
-    fun displayRating(): Double = rating ?: voteAverage ?: 0.0
+    fun displayRating(): Double = rating?.trim()?.toDoubleOrNull() ?: voteAverage?.trim()?.toDoubleOrNull() ?: 0.0
     fun playableFileId(): String {
         val firstEp = episodes?.firstOrNull()?.id
         return when {
