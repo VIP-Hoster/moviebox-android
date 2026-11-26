@@ -44,7 +44,7 @@ fun VideoPlayerScreen(
 
     val streamUrl = remember(fileId, token) {
         val encodedTok = Uri.encode(token)
-        "${ApiClient.BASE_URL}/api/stream/$fileId?token=$encodedTok"
+        "${ApiClient.BASE_URL}/stream/$fileId?token=$encodedTok"
     }
 
     val exoPlayer = remember(streamUrl) {
