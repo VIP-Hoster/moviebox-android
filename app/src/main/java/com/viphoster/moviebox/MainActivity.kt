@@ -39,6 +39,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -94,7 +95,7 @@ fun MovieBoxApp() {
         try {
             val bearer = "Bearer $tok"
             val userInfo = ApiClient.api.getMe(bearer)
-            if (!userInfo.authenticated && userInfo.role.isNullOrBlank()) {
+            if (!userInfo.authenticated && (userInfo.role ?: "").isBlank())) {
                 saveToken("")
                 me = null
                 return
@@ -280,11 +281,18 @@ fun LoginScreen(loading: Boolean, onSuccess: (String) -> Unit) {
             HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
             Spacer(Modifier.height(20.dp))
 
+            var passVisible by remember { mutableStateOf(false) }
+            var loginError by remember { mutableStateOf("") }
             OutlinedTextField(
                 value = adminPass,
-                onValueChange = { adminPass = it },
+                onValueChange = { adminPass = it; loginError = "" },
                 label = { Text("Admin Password") },
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (passVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    TextButton(onClick = { passVisible = !passVisible }) {
+                        Text(if (passVisible) "Hide" else "Show")
+                    }
+                },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -296,15 +304,19 @@ fun LoginScreen(loading: Boolean, onSuccess: (String) -> Unit) {
                         try {
                             val res = ApiClient.api.adminLogin(LoginRequest(adminPass))
                             if (!res.token.isNullOrBlank()) onSuccess(res.token)
-                            else Toast.makeText(context, res.detail ?: "Wrong password", Toast.LENGTH_SHORT).show()
+                            else { loginError = res.detail ?: "Wrong password"; Toast.makeText(context, loginError, Toast.LENGTH_SHORT).show() }
                         } catch (e: Exception) {
-                            Toast.makeText(context, "Login error: ${e.message}", Toast.LENGTH_SHORT).show()
+                            loginError = "Login error: ${e.message}"; Toast.makeText(context, loginError, Toast.LENGTH_SHORT).show()
                         } finally { busy = false }
                     }
                 },
                 enabled = !busy && adminPass.isNotBlank(),
                 modifier = Modifier.fillMaxWidth().height(46.dp)
-            ) { Text("Admin Login") }
+            ) { Text(if (busy) "Logging in..." else "Admin Login") }
+            if (loginError.isNotBlank()) {
+                Spacer(Modifier.height(10.dp))
+                Text(loginError, color = MaterialTheme.colorScheme.error)
+            }
         }
     }
 }
