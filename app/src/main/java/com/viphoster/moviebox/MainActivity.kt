@@ -416,7 +416,7 @@ fun MediaPosterCard(item: MediaItem, onClick: () -> Unit) {
     ) {
         Box(modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f).background(Color(0xFF1E242E))) {
             AsyncImage(
-                model = item.poster,
+                model = item.displayPoster(),
                 contentDescription = item.displayTitle(),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
@@ -487,7 +487,7 @@ fun MediaDetailScreen(
     Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState).background(Color(0xFF0D1013))) {
         Box(modifier = Modifier.fillMaxWidth()) {
             AsyncImage(
-                model = item.poster,
+                model = item.displayPoster(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.matchParentSize().blur(26.dp).alpha(0.22f)
@@ -530,7 +530,7 @@ fun MediaDetailScreen(
                         }
                     }
                     AsyncImage(
-                        model = item.poster,
+                        model = item.displayPoster(),
                         contentDescription = item.displayTitle(),
                         contentScale = ContentScale.Crop,
                         modifier = Modifier

@@ -48,6 +48,20 @@ data class MediaItem(
 ) {
     fun displayTitle(): String = (title ?: name ?: "Untitled").trim()
     fun displayOverview(): String = (overview ?: description ?: "").trim()
+    fun displayPoster(): String? {
+        val raw = poster?.trim() ?: return null
+        if (raw.isEmpty()) return null
+        if (raw.startsWith("/api/poster?") && "url=" in raw) {
+            val encoded = raw.substringAfter("url=").substringBefore("&")
+            return try {
+                java.net.URLDecoder.decode(encoded, "UTF-8")
+            } catch (_: Exception) {
+                ApiClient.BASE_URL + raw
+            }
+        }
+        return if (raw.startsWith("/")) ApiClient.BASE_URL + raw else raw
+    }
+
     fun displayRating(): Double = rating?.trim()?.toDoubleOrNull() ?: voteAverage?.trim()?.toDoubleOrNull() ?: 0.0
     fun playableFileId(): String {
         val firstEp = episodes?.firstOrNull()?.id
